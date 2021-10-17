@@ -4,7 +4,7 @@ pub enum DateRuleState {
     Dead,
     /// Pending until specific date
     Pending(u32),
-    /// Held until other, non-hald arbiturary dependencies
+    /// Date held manually/due to arbiturary non-date reasons
     Held,
     /// Actively running, could be completed again
     Active

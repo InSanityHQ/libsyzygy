@@ -29,6 +29,7 @@ impl SingletonDateRule {
     }
 }
 
+/// See documentation for all DateRules
 impl DateRule for SingletonDateRule {
     fn next(&self) -> Option<(u32,u32)> {
         if !self.done { Some((self.due,

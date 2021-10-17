@@ -35,8 +35,22 @@ pub trait DateRule {
     fn active(&self) -> DateRuleState;
 }
 
+/// Rules of dependency blocking
+// pub struct 
+
+/// A Task!
 pub struct Task<'a> {
+    /// A mutable pointer to a DateRule by which this task subscribes to
     date: &'a mut dyn DateRule,
-    pub timeblock: u32,
-    pub estimated_duration: u16
+    /// A mutable pointer to a DependentRule
+    children: &'a [Task<'a>]
+    /// Whether timeblocking is enabled
+    timeblock_enabled: bool,
+    /// An optional timeblock value
+    timeblock: u32,
+    /// Estimated duration of the task. If blocking,
+    /// blocked time is timeblock + estimated_duration
+    estimated_duration: u16,
+    /// Pointer to slices of children
+    children: &'a [Task<'a>],
 }

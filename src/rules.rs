@@ -1,5 +1,9 @@
 use super::model::*;
 
+//////////////////////////////////
+/////// Singleton Dates //////////
+//////////////////////////////////
+
 /// Singleton dates (normal due + defer)
 pub struct SingletonDateRule {
     /// The "due date" of the rule
@@ -8,6 +12,21 @@ pub struct SingletonDateRule {
     defer: u32,
     /// Whether or not the date is done
     done: bool
+}
+
+impl SingletonDateRule {
+    /// Create a new Singnleton Rule given due/defer dates
+    ///
+    /// # Arguments
+    /// - `due`: due date, unix time, encoded in u32
+    /// - `defer`: defer date, unix time, encoded in u32
+    pub fn new(due:u32, defer:u32) -> Self {
+        SingletonDateRule {
+            due:due,
+            defer:defer,
+            done:false
+        }
+    }
 }
 
 impl DateRule for SingletonDateRule {
@@ -21,18 +40,14 @@ impl DateRule for SingletonDateRule {
         self.done = true;
     }
 
-    fn active(&self) -> bool {
-        return !self.done;
+    fn active(&self) -> DateRuleState {
+        if self.done {
+            return DateRuleState::Dead;
+        }
+
+        return DateRuleState::Active;
     }
 }
 
-impl SingletonDateRule {
-    pub fn new(due:u32, defer:u32) -> Self {
-        SingletonDateRule {
-            due:due,
-            defer:defer,
-            done:false
-        }
-    }
-}
+
 

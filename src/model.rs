@@ -11,8 +11,8 @@ pub enum DateRuleState {
 }
 
 pub trait DateRule {
-    /// Returns an Option containing potentionally
-    /// the next set of due dates
+    /// Returns an `Option` containing potentionally
+    /// the next set of due and defer dates
     ///
     /// # Examples
     ///
@@ -24,9 +24,15 @@ pub trait DateRule {
     /// ```
     fn next(&self) -> Option<(u32,u32)>;
 
-    /// 
+    /// Increment the Date Rule. Similar to "completing" a task.
     fn increment(&mut self) -> ();
-    fn active(&self) -> bool;
+
+    /// Returns a `DateRuleState` containing potentionally
+    /// the next set of due dates.
+    ///
+    /// # Possible States
+    /// See documentation on `DateRuleState`
+    fn active(&self) -> DateRuleState;
 }
 
 pub struct Task<'a> {

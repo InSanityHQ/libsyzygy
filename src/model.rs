@@ -1,3 +1,5 @@
+use uuid::Uuid;
+
 /// State of the date rule, returned on active()
 pub enum DateRuleState {
     /// Dead, will not become active again
@@ -35,15 +37,30 @@ pub trait DateRule {
     fn active(&self) -> DateRuleState;
 }
 
-/// Rules of dependency blocking
-// pub struct 
+/// Collection of tasks, also the source of querying commands
+pub struct Workspace {
+}
 
-/// A Task!
+/// Rules of dependency blocking
+pub enum Dependency {
+    /// No dependencies
+    Free,
+    /// Manual, direct dependents
+    Direct(Vec<Uuid>),
+    /// Direct parent
+    Parent,
+    /// Direct sibling above
+    Above,
+    /// Direct sibling below
+    Below
+}
+
+/// A Task! ID and pointers to others identified by UUIDs
 pub struct Task<'a> {
     /// A mutable pointer to a DateRule by which this task subscribes to
     date: &'a mut dyn DateRule,
     /// A mutable pointer to a DependentRule
-    children: &'a [Task<'a>]
+    dependency: Dependency,
     /// Whether timeblocking is enabled
     timeblock_enabled: bool,
     /// An optional timeblock value
@@ -51,6 +68,11 @@ pub struct Task<'a> {
     /// Estimated duration of the task. If blocking,
     /// blocked time is timeblock + estimated_duration
     estimated_duration: u16,
-    /// Pointer to slices of children
-    children: &'a [Task<'a>],
+    /// Pointer to vector of immutable borrows of children UUIDs
+    children: Vec<Uuid>,
+    /// ID
+    id: Uuid,
 }
+
+
+

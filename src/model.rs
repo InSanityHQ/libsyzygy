@@ -1,18 +1,21 @@
+use std::io::Stdin;
 use uuid::Uuid;
+use std::collections::HashMap;
+use chrono::prelude::*;
 
 /// State of the date rule, returned on active()
-pub enum DateRuleState {
+pub enum RecurState {
     /// Dead, will not become active again
     Dead,
     /// Pending until specific date
-    Pending(u32),
+    Pending(DateTime<Local>),
     /// Date held manually/due to arbiturary non-date reasons
     Held,
     /// Actively running, could be completed again
     Active
 }
 
-pub trait DateRule {
+pub trait Recur {
     /// Returns an `Option` containing potentionally
     /// the next set of due and defer dates
     ///
@@ -21,55 +24,32 @@ pub trait DateRule {
     /// When the rule is uncompleted/still repeating/available:
     ///
     /// ```
-    /// let rule = ImplDateRule::new();
-    /// rule.next(); // => Some(1202919209,1204919209)
+    /// let rule = ImplRecur::new();
+    /// rule.next(); // => Some(DateTime)
     /// ```
-    fn next(&self) -> Option<(u32,u32)>;
+    fn current(&self) -> Option<DateTime<Local>>;
 
     /// Increment the Date Rule. Similar to "completing" a task.
-    fn increment(&mut self) -> ();
+    fn next(&mut self) -> ();
 
-    /// Returns a `DateRuleState` containing potentionally
+    /// Returns a `RecurState` containing potentionally
     /// the next set of due dates.
     ///
     /// # Possible States
-    /// See documentation on `DateRuleState`
-    fn active(&self) -> DateRuleState;
-}
-
-/// Collection of tasks, also the source of querying commands
-pub struct Workspace {
-}
-
-/// Rules of dependency blocking
-pub enum Dependency {
-    /// No dependencies
-    Free,
-    /// Manual, direct dependents
-    Direct(Vec<Uuid>),
-    /// Direct parent
-    Parent,
-    /// Direct sibling above
-    Above,
-    /// Direct sibling below
-    Below
+    /// See documentation on `RecurState`
+    fn active(&self) -> RecurState;
 }
 
 /// A Task! ID and pointers to others identified by UUIDs
 pub struct Task<'a> {
-    /// A mutable pointer to a DateRule by which this task subscribes to
-    date: &'a mut dyn DateRule,
+    /// A mutable pointer to a Recur by which this task subscribes to
+    date: &'a mut dyn Recur,
     /// A mutable pointer to a DependentRule
-    dependency: Dependency,
-    /// Whether timeblocking is enabled
-    timeblock_enabled: bool,
-    /// An optional timeblock value
-    timeblock: u32,
-    /// Estimated duration of the task. If blocking,
-    /// blocked time is timeblock + estimated_duration
-    estimated_duration: u16,
+    // dependency: Dependency,
     /// Pointer to vector of immutable borrows of children UUIDs
     children: Vec<Uuid>,
+    /// Metadata consisting of label: <serialized data>
+    metadata: HashMap<String, String>,
     /// ID
     id: Uuid,
 }

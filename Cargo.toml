@@ -2,6 +2,8 @@
 name = "syzygy"
 version = "0.0.1"
 edition = "2018"
+description = "Next-gen todo library."
+license = "GPL-2.0 OR GPL-3.0"
 
 [lib]
 crate-type = ["rlib", "cdylib"]
@@ -10,3 +12,4 @@ crate-type = ["rlib", "cdylib"]
 [dependencies]
 chrono = "0.4.19"
 uuid = "0.8.2"
+

@@ -1,6 +1,6 @@
 [package]
 name = "syzygy"
-version = "0.0.1"
+version = "0.0.2"
 edition = "2018"
 description = "Next-gen todo library."
 license = "GPL-2.0 OR GPL-3.0"
@@ -11,5 +11,5 @@ crate-type = ["rlib", "cdylib"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [dependencies]
 chrono = "0.4.19"
-uuid = "0.8.2"
+uuid = { version = "0.8.2", features = ["v4"] }
 

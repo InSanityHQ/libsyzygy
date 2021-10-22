@@ -1,9 +1,10 @@
 use std::io::Stdin;
 use uuid::Uuid;
-use std::collections::HashMap;
+use std::collections::{HashMap};
 use chrono::prelude::*;
 
 /// State of the date rule, returned on active()
+#[derive(PartialEq, Debug)]
 pub enum RecurState {
     /// Dead, will not become active again
     Dead,
@@ -19,17 +20,11 @@ pub trait Recur {
     /// Returns an `Option` containing potentionally
     /// the next set of due and defer dates
     ///
-    /// # Examples
-    ///
-    /// When the rule is uncompleted/still repeating/available:
-    ///
-    /// ```
-    /// let rule = ImplRecur::new();
-    /// rule.next(); // => Some(DateTime)
-    /// ```
     fn current(&self) -> Option<DateTime<Local>>;
 
-    /// Increment the Date Rule. Similar to "completing" a task.
+    /**
+    Increment the Date Rule. Similar to "completing" a task.
+    */
     fn next(&mut self) -> ();
 
     /// Returns a `RecurState` containing potentionally
@@ -41,17 +36,31 @@ pub trait Recur {
 }
 
 /// A Task! ID and pointers to others identified by UUIDs
-pub struct Task<'a> {
+pub struct Task {
+    /// A title for the task.
+    pub title: String,
     /// A mutable pointer to a Recur by which this task subscribes to
-    date: &'a mut dyn Recur,
+    pub date: Box<Recur>,
     /// A mutable pointer to a DependentRule
     // dependency: Dependency,
     /// Pointer to vector of immutable borrows of children UUIDs
-    children: Vec<Uuid>,
+    pub children: Vec<Uuid>,
     /// Metadata consisting of label: <serialized data>
-    metadata: HashMap<String, String>,
+    pub metadata: HashMap<String, String>,
     /// ID
     id: Uuid,
+}
+
+impl Task {
+    pub fn new(title: String, date: Box<dyn Recur>) -> Task {
+	Task {
+	    title,
+	    date,
+	    children: Vec::new(),
+	    metadata: HashMap::new(),
+	    id: Uuid::new_v4(), 
+	}
+    }
 }
 
 

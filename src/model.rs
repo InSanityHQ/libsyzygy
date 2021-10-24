@@ -35,29 +35,48 @@ pub trait Recur {
     fn active(&self) -> RecurState;
 }
 
+/// State of a task's blocking dependency rule
+pub enum Dependency {
+    /// Not blocked by anything
+    Free,
+    /// Unblocked only when other tasks are Dead
+    Direct(Vec<Uuid>),
+    /// Unblocked only when parent task is Dead
+    Parent,
+    /// Unblocked only when all children is Dead
+    Children,
+    /// Unblocked only when sibling task directly above is Dead
+    Above,
+    /// Unblocked only when sibling task directly below is Dead
+    Below
+}
+
 /// A Task! ID and pointers to others identified by UUIDs
 pub struct Task {
     /// A title for the task.
     pub title: String,
     /// A mutable pointer to a Recur by which this task subscribes to
-    pub date: Box<Recur>,
+    pub date: Box<dyn Recur>,
     /// A mutable pointer to a DependentRule
     // dependency: Dependency,
     /// Pointer to vector of immutable borrows of children UUIDs
     pub children: Vec<Uuid>,
-    /// Metadata consisting of label: <serialized data>
+    /// Metadata consisting of label: <serialized data> (@david in what format?)
     pub metadata: HashMap<String, String>,
+    /// The dependency state of the task
+    pub dependency: Dependency,
     /// ID
     id: Uuid,
 }
 
 impl Task {
-    pub fn new(title: String, date: Box<dyn Recur>) -> Task {
+    pub fn new(title: &str, date: Box<dyn Recur>) -> Task {
 	Task {
-	    title,
+	    title: String::from(title),
 	    date,
 	    children: Vec::new(),
 	    metadata: HashMap::new(),
+            dependency: Dependency::Free,
 	    id: Uuid::new_v4(), 
 	}
     }

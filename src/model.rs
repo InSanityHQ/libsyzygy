@@ -1,4 +1,3 @@
-use std::io::Stdin;
 use uuid::Uuid;
 use std::collections::{HashMap};
 use chrono::prelude::*;
@@ -80,7 +79,10 @@ impl Task {
 	    id: Uuid::new_v4(), 
 	}
     }
+
+    /// Returns the ID of the Task
+    pub fn id(&self) -> String {
+        String::from(self.id.to_string())
+    }
 }
-
-
 

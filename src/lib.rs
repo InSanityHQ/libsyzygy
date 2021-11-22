@@ -16,13 +16,14 @@ mod tests {
     fn test_defer() {	
 	let now = Local::now();
         let mut t: Task = Task::new(
-	    String::from("Testing"),
+	    "hewooo",
 	    Box::new(Deadline::new(
 		now + Duration::days(3),
 		now + Duration::days(1),
 	    )),
 	);
 	assert_eq!(t.date.current(), None);
+	assert_eq!(t.date.active(), RecurState::Pending(now + Duration::days(1)));
 	t.date.next();
 	assert_eq!(t.date.active(), RecurState::Dead);
     }

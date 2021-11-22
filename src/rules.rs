@@ -53,7 +53,7 @@ impl Recur for Deadline {
     fn active(&self) -> RecurState {
         if self.done {
             return RecurState::Dead;
-        } else if is_past(Local::now(), self.defer) {
+        } else if is_past(self.defer, Local::now()) {
 	    return RecurState::Pending(self.defer);
 	}	
         return RecurState::Active;

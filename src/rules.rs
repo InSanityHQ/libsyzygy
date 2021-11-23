@@ -2,7 +2,12 @@ use super::model::*;
 use chrono::prelude::*;
 use chrono::Duration;
 
-// Check if timestamp a is past timestamp b.
+/// Check if timestamp a is past timestamp b.
+/// i.e. that timestamp "a" at a later date than "b"
+///
+/// # Arguments
+/// - `a`: the time that should be "later" DateTime<Local>
+/// - `b`: the time that sohuld be "earlier" DateTime<Local>
 fn is_past(a: DateTime<Local>, b: DateTime<Local>) -> bool {
     if a.signed_duration_since(b) > Duration::seconds(0) {
 	return true;
@@ -11,13 +16,28 @@ fn is_past(a: DateTime<Local>, b: DateTime<Local>) -> bool {
     }
 }
 
+/// Null date rule that does nothing and is always available
+pub struct Blank {}
+
+impl Recur for Blank {
+    fn current(&self) -> Option<DateTime<Local>> {
+        return None;
+    }
+
+    fn next(&mut self) -> () {}
+
+    fn active(&self) -> RecurState {
+        RecurState::Active
+    }
+}
+
 /// Singleton dates (normal due + defer)
 pub struct Deadline {
-    /// The "due date" of the rule
-    due: DateTime<Local>,
-    /// The "defer date" of the rule
-    defer: DateTime<Local>,
-    /// Whether or not the date is done
+    // The "due date" of the rule
+    pub due: DateTime<Local>,
+    // The "defer date" of the rule
+    pub defer: DateTime<Local>,
+    // Whether or not the date is done
     done: bool
 }
 
@@ -60,54 +80,73 @@ impl Recur for Deadline {
     }
 }
 
-pub struct Until {
-    due: DateTime<Local>,
-    repeat: Duration,
-    defer: Duration, // Relative to repeat.
-    end_date: DateTime<Local>,
-    done: bool,
+/// Due date that repeats every X time interval consistently
+/// i.e. 1 second/minute/day/(exactly one) month/year etc.
+pub struct Constant {
+    // the "due date" of a task
+    pub due: DateTime<Local>,
+    // the repeat interval
+    pub repeat: Duration,
+    // relative to last repeat date
+    // so "available" is defined as due date - defer 
+    pub defer: Duration, // Relative to repeat.
+    // dead if due date is after this end date
+    pub end_date: Option<DateTime<Local>>
 }
 
-impl Until {
+impl Constant {
     pub fn new(
 	due: DateTime<Local>,
-	end_date: DateTime<Local>,
+	end_date: Option<DateTime<Local>>,
 	repeat: Duration,
 	defer: Duration,
     ) -> Self {
-        Until {
+        Constant {
             due,
             end_date,
 	    repeat,
-	    defer,
-            done: false,
+	    defer
         }
     }
 }
 
-impl Recur for Until {
+/// See documentation for all Recurs
+impl Recur for Constant {
     fn current(&self) -> Option<DateTime<Local>> {
-        if !self.done && is_past(Local::now(), self.due - self.defer) {
-	    Some(self.due)
-	} else {
-	    None
-	}
+        // If there is an end date, return None if the end date is passed 
+        if let Some(end_date) = self.end_date {
+            if is_past(self.due, end_date) {
+                return None;
+            }
+        }
+
+        // If not, if current time is past start time, return due date
+        // else, return none
+        if is_past(Local::now(), self.due - self.defer) {
+            Some(self.due) 
+        } else {
+            None
+        }
     }
 
     fn next(&mut self) -> () {
-	if is_past(Local::now(), self.end_date) {
-            self.done = true;
-	} else {
-	    self.due = self.due + self.repeat;
-	}
+        // Next date is just the increment 
+        self.due = self.due + self.repeat;
     }
 
     fn active(&self) -> RecurState {
-        if self.done {
-            return RecurState::Dead;
-        } else if is_past(Local::now(), self.due - self.defer) {
-	    return RecurState::Pending(self.due - self.defer);
-	}	
-        return RecurState::Active;
+        if let Some(end_date) = self.end_date {
+            if is_past(self.due, end_date) {
+                return RecurState::Dead
+            }
+        }
+
+        if is_past(Local::now(), self.due - self.defer) {
+	    RecurState::Pending(self.due - self.defer)
+	} else {
+            RecurState::Active
+        }
     }
 }
+
+

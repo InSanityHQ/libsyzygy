@@ -23,7 +23,7 @@ pub trait Recur {
 
     /**
     Increment the Date Rule. Similar to "completing" a task.
-    */
+     */
     fn next(&mut self) -> ();
 
     /// Returns a `RecurState` containing potentionally
@@ -34,20 +34,9 @@ pub trait Recur {
     fn active(&self) -> RecurState;
 }
 
-/// State of a task's blocking dependency rule
-pub enum Dependency {
-    /// Not blocked by anything
-    Free,
-    /// Unblocked only when other tasks are Dead
-    Direct(Vec<Uuid>),
-    /// Unblocked only when parent task is Dead
-    Parent,
-    /// Unblocked only when all children is Dead
-    Children,
-    /// Unblocked only when sibling task directly above is Dead
-    Above,
-    /// Unblocked only when sibling task directly below is Dead
-    Below
+pub trait Dependency {
+    /// Returns a boolean representing if the task is available.
+    fn available(&self) -> bool;
 }
 
 /// A Task! ID and pointers to others identified by UUIDs
@@ -56,33 +45,31 @@ pub struct Task {
     pub title: String,
     /// A mutable pointer to a Recur by which this task subscribes to
     pub date: Box<dyn Recur>,
-    /// A mutable pointer to a DependentRule
-    // dependency: Dependency,
+    /// A mutable pointer to a Dependency
+    pub dependency: Option<Box<dyn Dependency>>,
     /// Pointer to vector of immutable borrows of children UUIDs
     pub children: Vec<Uuid>,
-    /// Metadata consisting of label: <serialized data> (@david in what format?)
+    /// Metadata usable in any form
     pub metadata: HashMap<String, String>,
-    /// The dependency state of the task
-    pub dependency: Dependency,
-    /// ID
-    id: Uuid,
 }
 
-impl Task {
-    pub fn new(title: &str, date: Box<dyn Recur>) -> Task {
-	Task {
+pub struct Workspace {
+    pub tasks: HashMap<Uuid, Task>,
+}
+
+impl Workspace {
+    pub fn new() -> Workspace {
+	Workspace {tasks: HashMap::new()}
+    }
+    
+    pub fn add_task(&mut self, title: &str, date: Box<dyn Recur>, dep: Option<Box<dyn Dependency>>) {
+	self.tasks.insert(Uuid::new_v4(),  Task {
 	    title: String::from(title),
 	    date,
 	    children: Vec::new(),
 	    metadata: HashMap::new(),
-            dependency: Dependency::Free,
-	    id: Uuid::new_v4(), 
-	}
-    }
-
-    /// Returns the ID of the Task
-    pub fn id(&self) -> String {
-        String::from(self.id.to_string())
+            dependency: dep,
+	});
     }
 }
 

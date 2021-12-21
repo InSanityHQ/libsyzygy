@@ -2,6 +2,7 @@ mod model;
 pub mod rules;
 
 pub use model::Task;
+pub use model::Workspace;
 pub use model::Recur;
 pub use model::RecurState;
 pub use rules::*;
@@ -13,33 +14,22 @@ mod tests {
     use chrono::Duration;
 
     #[test]
-    fn task_title() {
-        let mut t: Task = Task::new(
-            "TestTask",
-            Box::new(Blank {})
-        );
-
-        assert_eq!(t.title, "TestTask");
-
-        t.title = String::from("testTask1");
-
-        assert_eq!(t.title, "testTask1");
-    }
-
-    #[test]
-    fn repeat_deadline() {	
+    fn direct_dep() {	
 	let now = Local::now();
-        let mut t: Task = Task::new(
+	let mut w = Workspace::new();
+        w.add_task(
 	    "TestTask",
-	    Box::new(Deadline::new(
-		now + Duration::days(3),
-		now + Duration::days(1),
-	    )),
+	    Box::new(Deadline::new(now + Duration::days(3))),
+	    None
 	);
-	assert_eq!(t.date.current(), None);
-	assert_eq!(t.date.active(), RecurState::Pending(now + Duration::days(1)));
-	t.date.next();
-	assert_eq!(t.date.active(), RecurState::Dead);
+	w.add_task(
+	    "TestTask2",
+	    Box::new(Deadline::new(now + Duration::days(4))),
+	    Some(Box::new(Direct::new(&w, *w.tasks.keys().next().unwrap())))
+	);	
+	assert_eq!(w.tasks.values().nth(1).unwrap().dependency.as_ref().unwrap().available(), false);
+	w.tasks.values().next().unwrap().date.next();
+	assert_eq!(w.tasks.values().nth(1).unwrap().dependency.as_ref().unwrap().available(), true);
     }
 
     // #[test]

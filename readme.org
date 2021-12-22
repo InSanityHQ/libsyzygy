@@ -1,0 +1,21 @@
+
+#+title: syzygy
+/A next-gen todo library/.
+
+* Powerful recurring tasks.
+- Repeating tasks are common in our lives and making them should be easy. =syzygy= has simple and expressive interfaces into making a wide variety of repeating behaviors from a task: ranging from one-time deadlines to repeating at arbitrary intervals until a given date.
+
+* Expressive dependencies.
+- Tasks naturally have dependencies, and should have flexible ways of declaring them. A task isn't only ever dependent on its parent - it can be dependent on another arbitrary task, a given date, or some external event on your computer like an e-mail. =syzygy= has a highly generic template for dependencies extendable by the user as well as powerful defaults to address this problem.
+
+* Unopinionated by default.
+- =syzygy= attempts to impose as little structure as possible by default: interfaces to =Recur= rules, dependencies, and tasks themselves have been designed to be as barebones as possible to allow for flexible usage on the user.
+- =syzygy= encourages the user to layer on any complexity they need themselves via the =metadata= attribute of each task: a string-to-string hashmap suitable for any form of serialized data.
+
+* Infinitely extensible.
+- =Recur= rules and dependencies are easily creatable by a user, allowing for tremendous flexibility
+- Any extra information needed about a =Task= is storeable in the =metadata= hashmap, allowing for limitless client-side functionality.
+
+* Simple to the core.
+- =syzygy= has understandable interfaces and is easy to extend, allowing the best of both worlds: power by default like in systems such as =org-mode= without any need to wade through half-implemented parsers and obscure documentation.
+

@@ -135,52 +135,53 @@ impl Recur for Constant {
     }
 }
 
-pub struct Date {
-    pub date: DateTime<Local>
-}
-
-impl Date {
-    pub fn new(date: DateTime<Local>) -> Box<Date> {
-	Box::new(Date { date })
-    }
-}
-
+pub struct Date { pub date: DateTime<Local> }
+impl Date { pub fn new(date: DateTime<Local>) -> Box<Date> { Box::new(Date { date }) } }
 impl Dependency for Date {
-    fn available(&self, _space: &Workspace, _task: &Task) -> Result<bool, TaskError> {	
+    fn available(&self, _space: &Workspace, _task: (Uuid, &Task)) -> Result<bool, TaskError> {	
 	Ok(is_past(Local::now(), self.date))
     }
 }
 
-pub struct RelativeDate {
-    pub off: Duration
-}
-
-impl RelativeDate {
-    pub fn new(off: Duration) -> Box<RelativeDate> {
-	Box::new(RelativeDate { off })
-    }
-}
-
+pub struct RelativeDate { pub off: Duration }
+impl RelativeDate { pub fn new(off: Duration) -> Box<RelativeDate> { Box::new(RelativeDate { off }) } }
 impl Dependency for RelativeDate {
-    fn available(&self, _space: &Workspace, task: &Task) -> Result<bool, TaskError> {
-	let date = task.date.current().ok_or(TaskError::NonexistentError)?; // FIXME sketchy
+    fn available(&self, _space: &Workspace, task: (Uuid, &Task)) -> Result<bool, TaskError> {
+	let date = task.1.date.current().ok_or(TaskError::NonexistentError)?; // FIXME sketchy
 	Ok(is_past(Local::now(), date - self.off))
     }
 }
 
-pub struct Direct {
-    pub id: Uuid
-}
-
-impl Direct {
-    pub fn new(id: Uuid) -> Box<Direct> {
-	Box::new(Direct { id })
-    }
-}
-
+pub struct Direct { pub id: Uuid }
+impl Direct { pub fn new(id: Uuid) -> Box<Direct> { Box::new(Direct { id }) } }
 impl Dependency for Direct {
-    fn available(&self, space: &Workspace, _task: &Task) -> Result<bool, TaskError> {
-	let dep = space.tasks.get(&self.id).ok_or(TaskError::NonexistentError)?;
-	Ok(dep.date.active() == RecurState::Dead)
+    fn available(&self, space: &Workspace, _task: (Uuid, &Task)) -> Result<bool, TaskError> {
+	space.task_done(self.id)	
     }
 }
+
+pub struct Children {}
+impl Children { pub fn new() -> Box<Children> { Box::new(Children{}) } }
+impl Dependency for Children {
+    fn available(&self, space: &Workspace, task: (Uuid, &Task)) -> Result<bool, TaskError> {
+	for i in &task.1.children {
+	    let current_task = space.tasks.get(i).ok_or(TaskError::UnreachableError)?;
+	    if current_task.date.active() == RecurState::Active {
+		return Ok(false);
+	    }
+	}
+	Ok(true)
+    }
+}
+
+pub struct Parent {}
+impl Parent { pub fn new() -> Box<Parent> { Box::new(Parent{}) } }
+impl Dependency for Parent {
+    fn available(&self, space: &Workspace, task: (Uuid, &Task)) -> Result<bool, TaskError> {
+	let parent = space.task_get_parent(task.0)?;
+	let out = space.task_done(parent)?;
+	Ok(out)
+    }
+}
+
+

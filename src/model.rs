@@ -1,5 +1,5 @@
 use uuid::Uuid;
-use std::collections::{HashMap};
+use std::collections::{HashMap, VecDeque};
 use chrono::prelude::*;
 
 /// State of the date rule, returned on active()
@@ -32,7 +32,7 @@ pub trait Recur {
 
 pub trait Dependency {
     /// Returns a boolean representing if the task is available.
-    fn available(&self, space: &Workspace, task: &Task) -> Result<bool, TaskError>;
+    fn available(&self, space: &Workspace, task: (Uuid, &Task)) -> Result<bool, TaskError>;
 }
 
 /// A Task! ID and pointers to others identified by UUIDs
@@ -58,7 +58,8 @@ pub struct Workspace {
 pub enum TaskError {
     NonexistentError,
     NonexistentKeyError,
-    DuplicateError,   
+    DuplicateError,
+    UnreachableError,
 }
 
 impl std::fmt::Display for TaskError {
@@ -67,6 +68,7 @@ impl std::fmt::Display for TaskError {
 	    TaskError::DuplicateError => write!(f, "Task already inserted"),
 	    TaskError::NonexistentError => write!(f, "Task doesn't exist"),
 	    TaskError::NonexistentKeyError => write!(f, "Metadata key doesn't exist"),
+	    TaskError::UnreachableError => write!(f, "You've somehow reached an unreachable state. Congrats?"),
 	}
     }
 }
@@ -93,13 +95,18 @@ impl Workspace {
     pub fn task_available(&self, id: Uuid) -> Result<bool, TaskError> {
 	let task = self.tasks.get(&id).ok_or(TaskError::NonexistentError)?;
 	for dependency in &task.dependencies {
-	    if !dependency.available(&self, task)? {
+	    if !dependency.available(&self, (id, task))? {
 		return Ok(false);
 	    }
 	}
 	Ok(true)
     }
 
+    pub fn task_done(&self, id: Uuid) -> Result<bool, TaskError> {
+	let task = self.tasks.get(&id).ok_or(TaskError::NonexistentError)?;
+	Ok(task.date.active() == RecurState::Dead)
+    }
+    
     pub fn task_complete(&mut self, id: Uuid) -> Result<(), TaskError> {
 	let task = self.tasks.get_mut(&id).ok_or(TaskError::NonexistentError)?;
 	task.date.next();
@@ -132,5 +139,24 @@ impl Workspace {
 	let metadata = task.metadata.get_mut(&key).ok_or(TaskError::NonexistentKeyError)?;
 	*metadata = val;
 	Ok(())
+    }
+
+    pub fn task_get_parent(&self, id: Uuid) -> Result<Uuid, TaskError> {
+	let mut stack: VecDeque<Uuid> = VecDeque::new();
+	for task in self.tasks.iter() {
+	    for i in &task.1.children {
+		if *i == id { return Ok(*task.0); } 			
+		stack.push_front(*i);
+	    }
+	}
+	while !stack.is_empty() {
+	    let current_id = stack.pop_front().ok_or(TaskError::UnreachableError)?;
+	    let current_task = self.tasks.get(&current_id).ok_or(TaskError::NonexistentError)?;
+	    for i in &current_task.children {
+		if *i == id { return Ok(current_id); } 			
+		stack.push_front(*i);
+	    }	    
+	}
+	Err(TaskError::NonexistentError)
     }
 }

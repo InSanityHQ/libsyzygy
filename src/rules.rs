@@ -45,11 +45,11 @@ impl Deadline {
     ///
     /// # Arguments
     /// - `due`: due date, unix time, encoded in DateTime<Local>
-    pub fn new(due: DateTime<Local>) -> Self {
-	Deadline {
+    pub fn new(due: DateTime<Local>) -> Box<Deadline> {
+	Box::new(Deadline {
 	    due,
 	    done: false
-	}
+	})
     }
 }
 
@@ -96,13 +96,13 @@ impl Constant {
 	end_date: Option<DateTime<Local>>,
 	repeat: Duration,
 	defer: Duration,
-    ) -> Self {
-	Constant {
+    ) -> Box<Constant> {
+	Box::new(Constant {
 	    due,
 	    end_date,
 	    repeat,
 	    defer
-	}
+	})
     }
 }
 
@@ -149,9 +149,32 @@ pub struct Date {
     pub date: DateTime<Local>
 }
 
+impl Date {
+    pub fn new(date: DateTime<Local>) -> Box<Date> {
+	Box::new(Date { date })
+    }
+}
+
 impl Dependency for Date {
-    fn available(&self, space: &Workspace) -> bool {
-	is_past(self.date, Local::now())
+    fn available(&self, _space: &Workspace, _task: &Task) -> Result<bool, TaskError> {	
+	Ok(is_past(self.date, Local::now()))
+    }
+}
+
+pub struct RelativeDate {
+    pub off: Duration
+}
+
+impl RelativeDate {
+    pub fn new(off: Duration) -> Box<RelativeDate> {
+	Box::new(RelativeDate { off })
+    }
+}
+
+impl Dependency for RelativeDate {
+    fn available(&self, _space: &Workspace, task: &Task) -> Result<bool, TaskError> {
+	let date = task.date.current().ok_or(TaskError::NonexistentError)?;
+	Ok(is_past(date  + self.off, Local::now()))
     }
 }
 
@@ -160,14 +183,14 @@ pub struct Direct {
 }
 
 impl Direct {
-    pub fn new(id: Uuid) -> Direct {
-	Direct { id }
+    pub fn new(id: Uuid) -> Box<Direct> {
+	Box::new(Direct { id })
     }
 }
 
 impl Dependency for Direct {
-    fn available(&self, space: &Workspace) -> bool {
-	space.tasks.get(&self.id).unwrap()
-	    .date.active() == RecurState::Dead
+    fn available(&self, space: &Workspace, _task: &Task) -> Result<bool, TaskError> {
+	let dep = space.tasks.get(&self.id).ok_or(TaskError::NonexistentError)?;
+	Ok(dep.date.active() == RecurState::Dead)
     }
 }

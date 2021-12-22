@@ -36,7 +36,7 @@ pub trait Recur {
 
 pub trait Dependency {
     /// Returns a boolean representing if the task is available.
-    fn available(&self, space: &Workspace) -> bool;
+    fn available(&self, space: &Workspace, task: &Task) -> Result<bool, TaskError>;
 }
 
 /// A Task! ID and pointers to others identified by UUIDs
@@ -45,8 +45,8 @@ pub struct Task {
     pub title: String,
     /// A mutable pointer to a Recur by which this task subscribes to
     pub date: Box<dyn Recur>,
-    /// A mutable pointer to a Dependency
-    pub dependency: Option<Box<dyn Dependency>>,
+    /// A vector of mutable pointers to a Dependency
+    pub dependencies: Vec<Box<dyn Dependency>>,
     /// Pointer to vector of immutable borrows of children UUIDs
     pub children: Vec<Uuid>,
     /// Metadata usable in any form
@@ -54,33 +54,87 @@ pub struct Task {
 }
 
 pub struct Workspace {
-    
     pub tasks: HashMap<Uuid, Task>,
 }
+
+// How does Rust error handling work!?
+#[derive(Debug)]
+pub enum TaskError {
+    NonexistentError,
+    NonexistentKeyError,
+    DuplicateError,   
+}
+
+impl std::fmt::Display for TaskError {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+	match self {
+	    TaskError::DuplicateError => write!(f, "Task already inserted"),
+	    TaskError::NonexistentError => write!(f, "Task doesn't exist"),
+	    TaskError::NonexistentKeyError => write!(f, "Metadata key doesn't exist"),
+	}
+    }
+}
+
+impl std::error::Error for TaskError {}
 
 impl Workspace {
     pub fn new() -> Workspace {
 	Workspace {tasks: HashMap::new()}
     }
-    
-    pub fn add_task(&mut self, title: &str, date: Box<dyn Recur>, dep: Option<Box<dyn Dependency>>) -> Uuid{
+
+    pub fn add_task(&mut self, title: &str, date: Box<dyn Recur>, deps: Vec<Box<dyn Dependency>>) -> Uuid {
 	let id = Uuid::new_v4();
-	self.tasks.insert(id,  Task {
+	self.tasks.insert(id, Task {
 	    title: String::from(title),
 	    date,
 	    children: Vec::new(),
 	    metadata: HashMap::new(),
-            dependency: dep,
+	    dependencies: deps,
 	});
 	id
     }
 
-    pub fn task_available(&self, id: Uuid) -> bool {
-	self.tasks.get(&id).unwrap().dependency.as_ref().unwrap().available(&self)
+    pub fn task_available(&self, id: Uuid) -> Result<bool, TaskError> {
+	let task = self.tasks.get(&id).ok_or(TaskError::NonexistentError)?;
+	for dependency in &task.dependencies {
+	    if !dependency.available(&self, task)? {
+		return Ok(false);
+	    }
+	}
+	Ok(true)
     }
 
-    pub fn task_complete(&mut self, id: Uuid) {
-	self.tasks.get_mut(&id).unwrap().date.next();
+    pub fn task_complete(&mut self, id: Uuid) -> Result<(), TaskError> {
+	let task = self.tasks.get_mut(&id).ok_or(TaskError::NonexistentError)?;
+	task.date.next();
+	Ok(())
+    }
+
+    pub fn task_add_child(&mut self, parent_id: Uuid, child_id: Uuid) -> Result<(), TaskError> {
+	self.tasks.get(&child_id).ok_or(TaskError::NonexistentError)?;
+	let task = self.tasks.get_mut(&parent_id).ok_or(TaskError::NonexistentError)?;
+	for child in &task.children {
+	    if *child == child_id { return Err(TaskError::DuplicateError) }
+	}
+	task.children.push(child_id);
+	Ok(())
+    }
+
+    pub fn task_add_metadata(&mut self, id: Uuid, key: String, val: String) -> Result<(), TaskError> {
+	let task = self.tasks.get_mut(&id).ok_or(TaskError::NonexistentError)?;
+	task.metadata.insert(key, val);
+	Ok(())
+    }
+
+    pub fn task_get_metadata(&mut self, id: Uuid, key: String) -> Result<Option<&String>, TaskError> {
+	let task = self.tasks.get_mut(&id).ok_or(TaskError::NonexistentError)?;
+	Ok(task.metadata.get(&key))
+    }
+
+    pub fn task_set_metadata(&mut self, id: Uuid, key: String, val: String) -> Result<(), TaskError> {
+	let task = self.tasks.get_mut(&id).ok_or(TaskError::NonexistentError)?;
+	let metadata = task.metadata.get_mut(&key).ok_or(TaskError::NonexistentKeyError)?;
+	*metadata = val;
+	Ok(())
     }
 }
-

@@ -17,22 +17,28 @@ fn is_past(a: DateTime<Local>, b: DateTime<Local>) -> bool {
     }
 }
 
-/// Null date rule that does nothing and is always available
-pub struct Blank {}
+/// Null date rule that does nothing special and is always available
+pub struct Blank {done: bool}
+
+impl Blank {
+    pub fn new() -> Box<Blank> { Box::new(Blank{done: false}) }
+}
 
 impl Recur for Blank {
     fn current(&self) -> Option<DateTime<Local>> {
 	return None;
     }
 
-    fn next(&mut self) -> () {}
+    fn next(&mut self) -> () {
+	self.done = true;
+    }
 
     fn active(&self) -> RecurState {
-	RecurState::Active
+	if self.done {RecurState::Dead} else {RecurState::Active}
     }
 }
 
-/// Singleton dates (normal due + defer)
+/// Singleton dates 
 pub struct Deadline {
     // The "due date" of the rule
     pub due: DateTime<Local>,
@@ -83,9 +89,6 @@ pub struct Constant {
     pub due: DateTime<Local>,
     // the repeat interval
     pub repeat: Duration,
-    // relative to last repeat date
-    // so "available" is defined as due date - defer
-    pub defer: Duration, // Relative to repeat.
     // dead if due date is after this end date
     pub end_date: Option<DateTime<Local>>
 }
@@ -95,13 +98,11 @@ impl Constant {
 	due: DateTime<Local>,
 	end_date: Option<DateTime<Local>>,
 	repeat: Duration,
-	defer: Duration,
     ) -> Box<Constant> {
 	Box::new(Constant {
 	    due,
 	    end_date,
 	    repeat,
-	    defer
 	})
     }
 }
@@ -115,14 +116,7 @@ impl Recur for Constant {
 		return None;
 	    }
 	}
-
-	// If not, if current time is past start time, return due date
-	// else, return none
-	if is_past(Local::now(), self.due - self.defer) {
-	    Some(self.due)
-	} else {
-	    None
-	}
+	Some(self.due)	
     }
 
     fn next(&mut self) -> () {
@@ -136,12 +130,8 @@ impl Recur for Constant {
 		return RecurState::Dead
 	    }
 	}
-
-	if is_past(Local::now(), self.due - self.defer) {
-	    RecurState::Pending(self.due - self.defer)
-	} else {
-	    RecurState::Active
-	}
+	
+	RecurState::Active
     }
 }
 
@@ -157,7 +147,7 @@ impl Date {
 
 impl Dependency for Date {
     fn available(&self, _space: &Workspace, _task: &Task) -> Result<bool, TaskError> {	
-	Ok(is_past(self.date, Local::now()))
+	Ok(is_past(Local::now(), self.date))
     }
 }
 
@@ -173,8 +163,8 @@ impl RelativeDate {
 
 impl Dependency for RelativeDate {
     fn available(&self, _space: &Workspace, task: &Task) -> Result<bool, TaskError> {
-	let date = task.date.current().ok_or(TaskError::NonexistentError)?;
-	Ok(is_past(date  + self.off, Local::now()))
+	let date = task.date.current().ok_or(TaskError::NonexistentError)?; // FIXME sketchy
+	Ok(is_past(Local::now(), date - self.off))
     }
 }
 

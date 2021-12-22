@@ -7,10 +7,6 @@ use chrono::prelude::*;
 pub enum RecurState {
     /// Dead, will not become active again
     Dead,
-    /// Pending until specific date
-    Pending(DateTime<Local>),
-    /// Date held manually/due to arbiturary non-date reasons
-    Held,
     /// Actively running, could be completed again
     Active
 }

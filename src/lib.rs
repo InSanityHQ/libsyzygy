@@ -17,19 +17,19 @@ mod tests {
     fn direct_dep() {	
 	let now = Local::now();
 	let mut w = Workspace::new();
-        w.add_task(
+        let id1 = w.add_task(
 	    "TestTask",
 	    Box::new(Deadline::new(now + Duration::days(3))),
 	    None
 	);
-	w.add_task(
+	let id2 = w.add_task(
 	    "TestTask2",
 	    Box::new(Deadline::new(now + Duration::days(4))),
-	    Some(Box::new(Direct::new(&w, *w.tasks.keys().next().unwrap())))
-	);	
-	assert_eq!(w.tasks.values().nth(1).unwrap().dependency.as_ref().unwrap().available(), false);
-	w.tasks.values().next().unwrap().date.next();
-	assert_eq!(w.tasks.values().nth(1).unwrap().dependency.as_ref().unwrap().available(), true);
+	    Some(Box::new(Direct::new(id1)))
+	);
+	assert_eq!(w.task_available(id2), false);
+	w.task_complete(id1);
+	assert_eq!(w.task_available(id2), true);
     }
 
     // #[test]

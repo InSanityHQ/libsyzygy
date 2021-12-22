@@ -36,7 +36,7 @@ pub trait Recur {
 
 pub trait Dependency {
     /// Returns a boolean representing if the task is available.
-    fn available(&self) -> bool;
+    fn available(&self, space: &Workspace) -> bool;
 }
 
 /// A Task! ID and pointers to others identified by UUIDs
@@ -54,6 +54,7 @@ pub struct Task {
 }
 
 pub struct Workspace {
+    
     pub tasks: HashMap<Uuid, Task>,
 }
 
@@ -62,14 +63,24 @@ impl Workspace {
 	Workspace {tasks: HashMap::new()}
     }
     
-    pub fn add_task(&mut self, title: &str, date: Box<dyn Recur>, dep: Option<Box<dyn Dependency>>) {
-	self.tasks.insert(Uuid::new_v4(),  Task {
+    pub fn add_task(&mut self, title: &str, date: Box<dyn Recur>, dep: Option<Box<dyn Dependency>>) -> Uuid{
+	let id = Uuid::new_v4();
+	self.tasks.insert(id,  Task {
 	    title: String::from(title),
 	    date,
 	    children: Vec::new(),
 	    metadata: HashMap::new(),
             dependency: dep,
 	});
+	id
+    }
+
+    pub fn task_available(&self, id: Uuid) -> bool {
+	self.tasks.get(&id).unwrap().dependency.as_ref().unwrap().available(&self)
+    }
+
+    pub fn task_complete(&mut self, id: Uuid) {
+	self.tasks.get_mut(&id).unwrap().date.next();
     }
 }
 

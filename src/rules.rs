@@ -150,23 +150,24 @@ pub struct Date {
 }
 
 impl Dependency for Date {
-    fn available(&self) -> bool {
+    fn available(&self, space: &Workspace) -> bool {
 	is_past(self.date, Local::now())
     }
 }
 
-pub struct Direct<'a> {
-    pub task: &'a Task
+pub struct Direct {
+    pub id: Uuid
 }
 
-impl Direct<'_> {
-    pub fn new<'a>(space: &Workspace, id: Uuid) -> Direct {
-	Direct { task: &space.tasks.get(&id).unwrap() }
+impl Direct {
+    pub fn new(id: Uuid) -> Direct {
+	Direct { id }
     }
 }
 
-impl Dependency for Direct<'_> {
-    fn available(&self) -> bool {
-	self.task.date.active() == RecurState::Dead
+impl Dependency for Direct {
+    fn available(&self, space: &Workspace) -> bool {
+	space.tasks.get(&self.id).unwrap()
+	    .date.active() == RecurState::Dead
     }
 }

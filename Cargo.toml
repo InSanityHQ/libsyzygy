@@ -1,6 +1,6 @@
 [package]
 name = "syzygy"
-version = "0.0.3"
+version = "0.0.4"
 edition = "2018"
 description = "Next-gen todo library."
 license = "GPL-2.0 OR GPL-3.0"
@@ -16,6 +16,4 @@ serde = { version = "1.0.132", features = ["derive"] }
 serde_json = "1.0.73"
 typetag = "0.1.8"
 uuid = { version = "0.8.2", features = ["v4", "serde"] }
-
-[features]
 

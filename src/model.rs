@@ -1,9 +1,10 @@
 use uuid::Uuid;
 use std::collections::{HashMap, VecDeque};
 use chrono::prelude::*;
+use serde::{Serialize, Deserialize};
 
 /// State of the date rule, returned on active()
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Serialize, Deserialize)]
 pub enum RecurState {
     /// Dead, will not become active again
     Dead,
@@ -11,6 +12,7 @@ pub enum RecurState {
     Active
 }
 
+#[typetag::serde(tag = "type")]
 pub trait Recur {
     /// Returns an `Option` containing potentionally
     /// the next set of due and defer dates
@@ -30,12 +32,14 @@ pub trait Recur {
     fn active(&self) -> RecurState;
 }
 
+#[typetag::serde(tag = "type")]
 pub trait Dependency {
     /// Returns a boolean representing if the task is available.
     fn available(&self, space: &Workspace, task: (Uuid, &Task)) -> Result<bool, TaskError>;
 }
 
 /// A Task! ID and pointers to others identified by UUIDs
+#[derive(Serialize, Deserialize)]
 pub struct Task {
     /// A title for the task.
     pub title: String,
@@ -49,6 +53,7 @@ pub struct Task {
     pub metadata: HashMap<String, String>,
 }
 
+#[derive(Serialize, Deserialize)]
 pub struct Workspace {
     pub tasks: HashMap<Uuid, Task>,
 }

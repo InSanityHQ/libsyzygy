@@ -5,11 +5,12 @@ pub use model::Task;
 pub use model::Workspace;
 pub use model::Recur;
 pub use model::RecurState;
+pub use rules::Date;
 pub use rules::*;
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use super::*;    
     use chrono::Local;
     use chrono::Duration;    
 
@@ -211,5 +212,24 @@ mod tests {
 	w.task_complete(id4).unwrap();
 	assert_eq!(w.task_available(id2).unwrap(), true);
     }
-	
+
+    #[test]
+    fn serialization() {
+	let now = Local::now();
+	let mut w = Workspace::new();
+        let id1 = w.add_task("TestTask", Blank::new(), Vec::new());
+	let id2 = w.add_task(
+	    "TestTask2",
+	    Deadline::new(now + Duration::days(4)),
+	    vec![Direct::new(id1), Date::new(now + Duration::days(1))]
+	);
+	let s = serde_json::to_string(&w).unwrap();
+	let w2: Workspace = serde_json::from_str(&s).unwrap();
+	assert_eq!(w2.task_available(id1).unwrap(), true);
+	assert_eq!(w2.task_available(id2).unwrap(), false);
+	w.task_complete(id1).unwrap();
+	assert_eq!(w2.task_available(id2).unwrap(), false);
+	assert_eq!(w2.tasks.get(&id2).unwrap().date.current().unwrap(), now + Duration::days(4));
+	assert_eq!(w2.tasks.get(&id2).unwrap().title, "TestTask2");
+    }
 }

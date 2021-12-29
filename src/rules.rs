@@ -2,6 +2,7 @@ use super::model::*;
 use chrono::prelude::*;
 use chrono::Duration;
 use uuid::Uuid;
+use serde::{Serialize, Deserialize};
 
 /// Check if timestamp a is past timestamp b.
 /// i.e. that timestamp "a" at a later date than "b"
@@ -18,12 +19,10 @@ fn is_past(a: DateTime<Local>, b: DateTime<Local>) -> bool {
 }
 
 /// Null date rule that does nothing special and is always available
+#[derive(Serialize, Deserialize)]
 pub struct Blank {done: bool}
-
-impl Blank {
-    pub fn new() -> Box<Blank> { Box::new(Blank{done: false}) }
-}
-
+impl Blank { pub fn new() -> Box<Blank> { Box::new(Blank{done: false}) } }
+#[typetag::serde]
 impl Recur for Blank {
     fn current(&self) -> Option<DateTime<Local>> {
 	return None;
@@ -38,7 +37,8 @@ impl Recur for Blank {
     }
 }
 
-/// Singleton dates 
+/// Singleton dates
+#[derive(Serialize, Deserialize)]
 pub struct Deadline {
     // The "due date" of the rule
     pub due: DateTime<Local>,
@@ -60,6 +60,7 @@ impl Deadline {
 }
 
 /// See documentation for all Recurs
+#[typetag::serde]
 impl Recur for Deadline {
     fn current(&self) -> Option<DateTime<Local>> {
 	if !self.done {
@@ -84,11 +85,12 @@ impl Recur for Deadline {
 
 /// Due date that repeats every X time interval consistently
 /// i.e. 1 second/minute/day/(exactly one) month/year etc.
+#[derive(Serialize, Deserialize)]
 pub struct Constant {
     // the "due date" of a task
     pub due: DateTime<Local>,
     // the repeat interval
-    pub repeat: Duration,
+    pub repeat: std::time::Duration,
     // dead if due date is after this end date
     pub end_date: Option<DateTime<Local>>
 }
@@ -102,12 +104,13 @@ impl Constant {
 	Box::new(Constant {
 	    due,
 	    end_date,
-	    repeat,
+	    repeat: repeat.to_std().unwrap(), // TODO Remove the unwrap.
 	})
     }
 }
 
 /// See documentation for all Recurs
+#[typetag::serde]
 impl Recur for Constant {
     fn current(&self) -> Option<DateTime<Local>> {
 	// If there is an end date, return None if the end date is passed
@@ -121,7 +124,7 @@ impl Recur for Constant {
 
     fn next(&mut self) -> () {
 	// Next date is just the increment
-	self.due = self.due + self.repeat;
+	self.due = self.due + Duration::from_std(self.repeat).unwrap(); // TODO handle errors.
     }
 
     fn active(&self) -> RecurState {
@@ -135,33 +138,41 @@ impl Recur for Constant {
     }
 }
 
+#[derive(Serialize, Deserialize)]
 pub struct Date { pub date: DateTime<Local> }
 impl Date { pub fn new(date: DateTime<Local>) -> Box<Date> { Box::new(Date { date }) } }
+#[typetag::serde]
 impl Dependency for Date {
     fn available(&self, _space: &Workspace, _task: (Uuid, &Task)) -> Result<bool, TaskError> {	
 	Ok(is_past(Local::now(), self.date))
     }
 }
 
-pub struct RelativeDate { pub off: Duration }
-impl RelativeDate { pub fn new(off: Duration) -> Box<RelativeDate> { Box::new(RelativeDate { off }) } }
+#[derive(Serialize, Deserialize)]
+pub struct RelativeDate { pub off: std::time::Duration }
+impl RelativeDate { pub fn new(off: Duration) -> Box<RelativeDate> { Box::new(RelativeDate { off: off.to_std().unwrap() }) } } // TODO handle error
+#[typetag::serde]
 impl Dependency for RelativeDate {
     fn available(&self, _space: &Workspace, task: (Uuid, &Task)) -> Result<bool, TaskError> {
 	let date = task.1.date.current().ok_or(TaskError::NonexistentError)?; // FIXME sketchy
-	Ok(is_past(Local::now(), date - self.off))
+	Ok(is_past(Local::now(), date - Duration::from_std(self.off).unwrap())) // TODO handle error
     }
 }
 
+#[derive(Serialize, Deserialize)]
 pub struct Direct { pub id: Uuid }
 impl Direct { pub fn new(id: Uuid) -> Box<Direct> { Box::new(Direct { id }) } }
+#[typetag::serde]
 impl Dependency for Direct {
     fn available(&self, space: &Workspace, _task: (Uuid, &Task)) -> Result<bool, TaskError> {
 	space.task_done(self.id)	
     }
 }
 
+#[derive(Serialize, Deserialize)]
 pub struct Children {}
 impl Children { pub fn new() -> Box<Children> { Box::new(Children{}) } }
+#[typetag::serde]
 impl Dependency for Children {
     fn available(&self, space: &Workspace, task: (Uuid, &Task)) -> Result<bool, TaskError> {
 	for i in &task.1.children {
@@ -174,8 +185,10 @@ impl Dependency for Children {
     }
 }
 
+#[derive(Serialize, Deserialize)]
 pub struct Parent {}
 impl Parent { pub fn new() -> Box<Parent> { Box::new(Parent{}) } }
+#[typetag::serde]
 impl Dependency for Parent {
     fn available(&self, space: &Workspace, task: (Uuid, &Task)) -> Result<bool, TaskError> {
 	let parent = space.task_get_parent(task.0)?;

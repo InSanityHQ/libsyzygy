@@ -1,6 +1,6 @@
 [package]
 name = "syzygy"
-version = "0.0.5"
+version = "0.0.6"
 edition = "2018"
 description = "Next-gen todo library."
 license = "GPL-2.0 OR GPL-3.0"

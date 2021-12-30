@@ -134,8 +134,8 @@ impl Workspace {
 	Ok(())
     }
 
-    pub fn task_get_metadata(&mut self, id: Uuid, key: String) -> Result<Option<&String>, TaskError> {
-	let task = self.tasks.get_mut(&id).ok_or(TaskError::NonexistentError)?;
+    pub fn task_get_metadata(&self, id: Uuid, key: String) -> Result<Option<&String>, TaskError> {
+	let task = self.tasks.get(&id).ok_or(TaskError::NonexistentError)?;
 	Ok(task.metadata.get(&key))
     }
 

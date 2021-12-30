@@ -1,10 +1,7 @@
 mod model;
 pub mod rules;
 
-pub use model::Task;
-pub use model::Workspace;
-pub use model::Recur;
-pub use model::RecurState;
+pub use model::*;
 pub use rules::Date;
 pub use rules::*;
 
